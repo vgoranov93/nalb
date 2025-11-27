@@ -4,7 +4,6 @@ FROM ubuntu:latest
 # Install ImageMagick, inotify-tools and bash
 RUN apt-get update && apt-get install -y imagemagick bash inotify-tools
 
-
 # Create directories for source and destination
 RUN mkdir -p /images/source /images/destination
 

@@ -21,7 +21,7 @@ for file in "$SOURCE_DIR"/*; do
     echo "Processing file: $filename" >> "$LOG_FILE"
     
     # Resize the image and save it to the destination directory
-    convert "$file" -resize 800x800 "$DEST_DIR/$filename"
+    convert "$file" -resize 200x300 "$DEST_DIR/$filename"
     
     # Set the desired permissions for the resized file
     chmod 644 "$DEST_DIR/$filename"
