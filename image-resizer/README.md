@@ -1,130 +1,160 @@
-nalb-image-resizer
-Overview
+# NALB Image Resizer
 
-nalb-image-resizer is a Docker-based tool for processing images and monitoring directories.
-This project includes:
+A Docker-based image resizing tool with a web UI. Upload images through your browser, resize them, optionally add the NALB watermark, and download the results.
 
-resize_photos.sh – script for resizing photos
+## Features
 
-monitor.sh – script for monitoring a folder for changes
+- Web UI with drag-and-drop upload
+- Resize multiple images at once
+- Configurable width and height
+- Optional NALB logo watermark
+- Download resized images individually or as a ZIP
+- Stop server from the UI
+- Works on Linux, macOS, and Windows
 
-Dockerfile – defines the environment for running the scripts inside Docker
+## Quick Start
 
-This README explains how to build the Docker image, run the container, and mount host folders so your scripts can access real files on your machine.
+### 1. Install Prerequisites
 
-1. Build the Docker Image
+You need **Docker** and **Git** installed on your machine.
 
-Make sure your terminal is inside the directory containing the Dockerfile, then run:
+**Linux / macOS:**
 
-docker build -t nalb-image-resizer .
+Install Docker from [docker.com](https://www.docker.com/products/docker-desktop) and Git from [git-scm.com](https://git-scm.com/).
 
+**Windows 10/11:**
 
-This will create an image named nalb-image-resizer.
+Run the provided PowerShell installer as Administrator:
 
-2. Running the Container (basic)
+```powershell
+# Right-click install.ps1 -> Run with PowerShell (as Admin)
+# Or open PowerShell as Administrator and run:
+Set-ExecutionPolicy Bypass -Scope Process -Force
+.\install.ps1
+```
 
-You can run the container with:
+This will install Docker Desktop, Git, and enable WSL/Virtual Machine Platform automatically.
 
-docker run --name nalb-image-resizer-container nalb-image-resizer
+### 2. Start the Application
 
+**Linux / macOS:**
 
-But this won’t give your scripts access to files on your computer.
-To do real work, you must mount folders.
+```bash
+./start.sh
+```
 
-3. Mounting Host Folders
+**Windows:**
 
-To mount a folder from your machine into the container, use:
+Double-click `start.bat`
 
--v /path/on/host:/path/in/container
+The script will:
+- Build the Docker image (first time only)
+- Start the container
+- Open your browser to `http://localhost:5000`
 
-Example
+Resized images are saved to:
+- Linux/macOS: `~/Documents/resized-images`
+- Windows: `Documents\resized-images`
 
-If you want to work with:
+### 3. Use the Web UI
 
-Host folder: /home/user/photos
+1. Open `http://localhost:5000` in your browser
+2. Drag and drop images (or click to select files)
+3. Set the desired **Width** and **Height** (default: 200x300)
+4. Check **Add NALB watermark** if you want the logo on your images
+5. Click **Resize Images**
+6. Download files individually or click **Download All (ZIP)**
 
-Container folder: /app/photos
+### 4. Stop the Application
 
-Run:
+Three ways to stop:
 
-docker run \
-  --name nalb-image-resizer-container \
-  -v /home/user/photos:/app/photos \
-  nalb-image-resizer
+- Click the **Stop Server** button in the web UI
+- Run `./stop.sh` (Linux/macOS) or double-click `stop.bat` (Windows)
+- Run `docker stop nalb-resizer`
 
+## Manual Docker Commands
 
-Now the container can read and write files inside /app/photos, which maps directly to your local folder.
+If you prefer to run Docker commands directly instead of using the scripts:
 
-4. Running Scripts Inside the Container
-Option A – Script runs automatically
+**Build the image:**
 
-If your Dockerfile uses CMD or ENTRYPOINT, the script will run automatically when the container starts.
+```bash
+docker build -t nalb-resizer .
+```
 
-Option B – Run scripts manually
+**Run the container:**
 
-Launch an interactive session:
+```bash
+docker run -d --name nalb-resizer -p 5000:5000 -v /path/to/output:/images/destination nalb-resizer
+```
 
-docker run -it \
-  --name nalb-image-resizer-container \
-  -v /home/user/photos:/app/photos \
-  nalb-image-resizer /bin/bash
+**Example with a specific output folder:**
 
+```bash
+# Linux
+docker run -d --name nalb-resizer -p 5000:5000 -v ~/Documents/test:/images/destination nalb-resizer
 
-Then inside the container:
+# Windows (PowerShell)
+docker run -d --name nalb-resizer -p 5000:5000 -v ${env:USERPROFILE}\Documents\test:/images/destination nalb-resizer
+```
 
-./resize_photos.sh
-./monitor.sh
+**Stop and remove:**
 
-5. Mounting Multiple Folders
+```bash
+docker stop nalb-resizer
+docker rm nalb-resizer
+```
 
-You can mount more than one folder:
+**View logs:**
 
-docker run \
-  --name nalb-image-resizer-container \
-  -v /host/photos:/app/photos \
-  -v /host/output:/app/output \
-  -v /host/config:/app/config \
-  nalb-image-resizer
+```bash
+docker logs nalb-resizer
+```
 
+**Rebuild after changes:**
 
-Each -v mounts one folder.
+```bash
+docker stop nalb-resizer && docker rm nalb-resizer
+docker build -t nalb-resizer .
+```
 
-6. Managing the Container
-Stop the container:
-docker stop nalb-image-resizer-container
+## Project Structure
 
-Stop all containers:
-
-docker rm -f $(docker ps -aq)
-
-Remove the container:
-docker rm nalb-image-resizer-container
-
-Rebuild the image after changing files:
-docker build -t nalb-image-resizer:v1.0 .
-
-Run again with mounted folders:
-docker run \
-  -v /host/path:/container/path \
-  nalb-image-resizer
-
-7. Tips & Best Practices
-
-Always use absolute paths on the host (/home/user/...).
-
-Rebuild the Docker image when you modify scripts or dependencies.
-
-View logs with:
-
-docker logs nalb-image-resizer-container
-
-
-Use docker exec -it nalb-image-resizer-container bash to enter a running container.
-
-8. Optional: Suggested Folder Structure
-project/
-│
-├── Dockerfile
-├── resize_photos.sh
-├── monitor.sh
+```
+image-resizer/
+├── app.py              # Flask web server
+├── templates/
+│   └── index.html      # Web UI
+├── nalb_logo.png       # NALB logo (header + watermark)
+├── requirements.txt    # Python dependencies (Flask)
+├── Dockerfile          # Single container definition
+├── install.ps1         # Windows prerequisite installer
+├── start.sh            # Linux/macOS start script
+├── start.bat           # Windows start script
+├── stop.sh             # Linux/macOS stop script
+├── stop.bat            # Windows stop script
+├── resize_photos.sh    # Legacy CLI resize script
+├── monitor.sh          # Legacy CLI file monitor
 └── README.md
+```
+
+## How It Works
+
+The Docker container runs a Flask web server on port 5000. When you upload images through the UI:
+
+1. Images are saved to `/images/source` inside the container
+2. ImageMagick resizes them to your specified dimensions
+3. Optionally, the NALB logo is composited as a watermark
+4. Resized images are saved to `/images/destination`
+5. The destination folder is mounted to your host machine, so files appear directly on your computer
+
+## Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| "Docker is not running" | Start Docker Desktop and wait for it to fully load |
+| Port 5000 already in use | Change the port: `-p 8080:5000` then open `http://localhost:8080` |
+| Permission denied on start.sh | Run `chmod +x start.sh stop.sh` |
+| Images not appearing in output folder | Make sure the volume mount path exists on your host |
+| Windows: PowerShell script won't run | Run `Set-ExecutionPolicy Bypass -Scope Process -Force` first |

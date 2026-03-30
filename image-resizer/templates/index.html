@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NALB Image Resizer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f1117;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #1a1d29 0%, #2a2d3a 100%);
+      padding: 24px;
+      text-align: center;
+      border-bottom: 2px solid #3b82f6;
+    }
+    .header img {
+      max-height: 80px;
+      margin-bottom: 8px;
+    }
+    .header h1 {
+      font-size: 1.5rem;
+      color: #93c5fd;
+      font-weight: 600;
+    }
+    .header p { color: #9ca3af; font-size: 0.9rem; margin-top: 4px; }
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px; }
+
+    /* Upload Area */
+    .upload-area {
+      border: 2px dashed #3b82f6;
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #1a1d29;
+      margin-bottom: 24px;
+    }
+    .upload-area:hover, .upload-area.dragover {
+      border-color: #60a5fa;
+      background: #1e2231;
+    }
+    .upload-area svg {
+      width: 48px; height: 48px;
+      stroke: #3b82f6; fill: none;
+      stroke-width: 1.5; margin-bottom: 12px;
+    }
+    .upload-area p { color: #9ca3af; }
+    .upload-area p strong { color: #60a5fa; }
+
+    /* Settings */
+    .settings {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+      background: #1a1d29;
+      padding: 16px 20px;
+      border-radius: 10px;
+    }
+    .settings label { color: #9ca3af; font-size: 0.9rem; }
+    .settings input[type="number"] {
+      width: 80px; padding: 6px 10px;
+      background: #2a2d3a; border: 1px solid #404558;
+      border-radius: 6px; color: #e0e0e0;
+      font-size: 0.9rem;
+    }
+    .settings .checkbox-group {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .settings input[type="checkbox"] { accent-color: #3b82f6; }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 24px;
+      border: none; border-radius: 8px;
+      font-size: 0.95rem; cursor: pointer;
+      font-weight: 500; transition: all 0.15s;
+    }
+    .btn-primary { background: #3b82f6; color: #fff; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-primary:disabled { background: #374151; color: #6b7280; cursor: not-allowed; }
+    .btn-secondary { background: #374151; color: #d1d5db; }
+    .btn-secondary:hover { background: #4b5563; }
+    .btn-danger { background: #7f1d1d; color: #fca5a5; }
+    .btn-danger:hover { background: #991b1b; }
+    .btn-stop { background: #4a1d1d; color: #f87171; border: 1px solid #7f1d1d; }
+    .btn-stop:hover { background: #5a2020; }
+
+    .actions { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+
+    /* File list */
+    .file-list {
+      background: #1a1d29;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .file-list h3 { color: #93c5fd; margin-bottom: 12px; font-size: 1rem; }
+    .file-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #2a2d3a;
+      font-size: 0.9rem;
+    }
+    .file-item:last-child { border-bottom: none; }
+    .file-item .name { color: #d1d5db; }
+    .file-item .remove {
+      color: #f87171; cursor: pointer;
+      background: none; border: none; font-size: 0.85rem;
+    }
+
+    /* Results */
+    .results { margin-top: 24px; }
+    .results h3 { color: #93c5fd; margin-bottom: 16px; font-size: 1rem; }
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
+    }
+    .result-card {
+      background: #1a1d29;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #2a2d3a;
+    }
+    .result-card img {
+      width: 100%; height: 120px;
+      object-fit: cover;
+    }
+    .result-card .info {
+      padding: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .result-card .info span {
+      font-size: 0.8rem; color: #9ca3af;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      max-width: 100px;
+    }
+    .result-card .info a {
+      color: #60a5fa; text-decoration: none; font-size: 0.8rem;
+    }
+
+    /* Progress */
+    .progress-bar {
+      height: 4px; background: #2a2d3a;
+      border-radius: 2px; overflow: hidden;
+      margin-bottom: 24px; display: none;
+    }
+    .progress-bar .fill {
+      height: 100%; background: #3b82f6;
+      border-radius: 2px; transition: width 0.3s;
+      width: 0;
+    }
+
+    /* Status */
+    .status {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: none;
+      font-size: 0.9rem;
+    }
+    .status.success { display: block; background: #052e16; color: #86efac; border: 1px solid #166534; }
+    .status.error { display: block; background: #450a0a; color: #fca5a5; border: 1px solid #7f1d1d; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <img src="/logo" alt="NALB Logo" onerror="this.style.display='none'">
+  <h1>NALB Image Resizer</h1>
+  <p>Upload, resize, and download your images</p>
+</div>
+
+<div class="container">
+  <div id="status" class="status"></div>
+
+  <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4l4 4M4 14v4a2 2 0 002 2h12a2 2 0 002-2v-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p><strong>Click to upload</strong> or drag and drop</p>
+    <p style="font-size:0.8rem; margin-top:8px">PNG, JPG, WEBP, GIF — multiple files supported</p>
+    <input type="file" id="fileInput" multiple accept="image/*" style="display:none">
+  </div>
+
+  <div class="file-list" id="fileList" style="display:none">
+    <h3>Selected Files (<span id="fileCount">0</span>)</h3>
+    <div id="fileItems"></div>
+  </div>
+
+  <div class="settings">
+    <label>Width:</label>
+    <input type="number" id="width" value="200" min="1" max="10000">
+    <label>Height:</label>
+    <input type="number" id="height" value="300" min="1" max="10000">
+    <div class="checkbox-group">
+      <input type="checkbox" id="addLogo">
+      <label for="addLogo">Add NALB watermark</label>
+    </div>
+  </div>
+
+  <div class="progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="uploadBtn" onclick="uploadFiles()" disabled>Resize Images</button>
+    <a href="/download-all" class="btn btn-secondary" id="downloadAllBtn">Download All (ZIP)</a>
+    <button class="btn btn-danger" onclick="clearAll()">Clear All</button>
+    <button class="btn btn-stop" onclick="stopServer()">Stop Server</button>
+  </div>
+
+  <div class="results" id="results">
+    <h3>Resized Images</h3>
+    <div class="results-grid" id="resultsGrid">
+      {% for file in resized_files %}
+      <div class="result-card">
+        <img src="/resized/{{ file }}" alt="{{ file }}">
+        <div class="info">
+          <span title="{{ file }}">{{ file }}</span>
+          <a href="/resized/{{ file }}" download>Download</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const fileList = document.getElementById('fileList');
+  const fileItems = document.getElementById('fileItems');
+  const fileCount = document.getElementById('fileCount');
+  const uploadBtn = document.getElementById('uploadBtn');
+  let selectedFiles = [];
+
+  // Drag & drop
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    addFiles(e.dataTransfer.files);
+  });
+
+  fileInput.addEventListener('change', () => addFiles(fileInput.files));
+
+  function addFiles(files) {
+    for (const f of files) selectedFiles.push(f);
+    renderFileList();
+  }
+
+  function removeFile(idx) {
+    selectedFiles.splice(idx, 1);
+    renderFileList();
+  }
+
+  function renderFileList() {
+    fileCount.textContent = selectedFiles.length;
+    uploadBtn.disabled = selectedFiles.length === 0;
+    if (selectedFiles.length === 0) { fileList.style.display = 'none'; return; }
+    fileList.style.display = 'block';
+    fileItems.innerHTML = selectedFiles.map((f, i) =>
+      `<div class="file-item"><span class="name">${f.name} (${(f.size/1024).toFixed(1)} KB)</span><button class="remove" onclick="removeFile(${i})">Remove</button></div>`
+    ).join('');
+  }
+
+  function showStatus(msg, type) {
+    const s = document.getElementById('status');
+    s.textContent = msg;
+    s.className = 'status ' + type;
+    setTimeout(() => s.className = 'status', 5000);
+  }
+
+  async function uploadFiles() {
+    if (selectedFiles.length === 0) return;
+    const form = new FormData();
+    form.append('width', document.getElementById('width').value);
+    form.append('height', document.getElementById('height').value);
+    if (document.getElementById('addLogo').checked) form.append('add_logo', 'on');
+    selectedFiles.forEach(f => form.append('images', f));
+
+    const bar = document.getElementById('progressBar');
+    const fill = document.getElementById('progressFill');
+    bar.style.display = 'block';
+    fill.style.width = '30%';
+    uploadBtn.disabled = true;
+
+    try {
+      const res = await fetch('/upload', { method: 'POST', body: form });
+      fill.style.width = '100%';
+      const data = await res.json();
+      if (res.ok) {
+        showStatus(`Resized ${data.processed.length} image(s) successfully!`, 'success');
+        selectedFiles = [];
+        renderFileList();
+        refreshResults(data.processed);
+      } else {
+        showStatus(data.error || 'Upload failed', 'error');
+      }
+    } catch (e) {
+      showStatus('Upload failed: ' + e.message, 'error');
+    } finally {
+      uploadBtn.disabled = false;
+      setTimeout(() => { bar.style.display = 'none'; fill.style.width = '0'; }, 1000);
+    }
+  }
+
+  function refreshResults(files) {
+    const grid = document.getElementById('resultsGrid');
+    files.forEach(name => {
+      const card = document.createElement('div');
+      card.className = 'result-card';
+      card.innerHTML = `<img src="/resized/${name}?t=${Date.now()}" alt="${name}"><div class="info"><span title="${name}">${name}</span><a href="/resized/${name}" download>Download</a></div>`;
+      grid.prepend(card);
+    });
+  }
+
+  async function clearAll() {
+    if (!confirm('Remove all source and resized images?')) return;
+    await fetch('/clear', { method: 'POST' });
+    document.getElementById('resultsGrid').innerHTML = '';
+    showStatus('All images cleared', 'success');
+  }
+
+  async function stopServer() {
+    if (!confirm('This will stop the NALB Image Resizer. Continue?')) return;
+    try {
+      await fetch('/shutdown', { method: 'POST' });
+    } catch (e) {}
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#9ca3af;font-family:sans-serif;background:#0f1117"><div style="text-align:center"><h2 style="color:#f87171;margin-bottom:12px">Server Stopped</h2><p>You can close this tab. To start again, run <strong>start.sh</strong></p></div></div>';
+  }
+</script>
+
+</body>
+</html>

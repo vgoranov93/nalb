@@ -1,32 +1,35 @@
-# Use an official Ubuntu base image
 FROM ubuntu:latest
 
-# Install ImageMagick, inotify-tools and bash
-RUN apt-get update && apt-get install -y imagemagick bash inotify-tools
+# Install ImageMagick, Python, and pip
+RUN apt-get update && apt-get install -y \
+    imagemagick \
+    python3 \
+    python3-pip \
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create directories for source and destination
-RUN mkdir -p /images/source /images/destination
+# Create directories
+RUN mkdir -p /images/source /images/destination /app
 
-# Change ownership of the directories to the non-root user
-RUN chown -R ubuntu:ubuntu /images
+# Copy the nalb logo from the add-logo project
+COPY nalb_logo.png /app/nalb_logo.png
 
-# Copy the resize script into the container
-COPY resize_photos.sh /usr/local/bin/resize_photos.sh
+# Set up Python virtual environment and install Flask
+RUN python3 -m venv /app/venv
+COPY requirements.txt /app/requirements.txt
+RUN /app/venv/bin/pip install -r /app/requirements.txt
 
-# Make the script executable
-RUN chmod +x /usr/local/bin/resize_photos.sh
+# Copy application files
+COPY app.py /app/app.py
+COPY templates /app/templates
 
-# Copy the monitor script into the container
-COPY monitor.sh /usr/local/bin/monitor.sh
+# Change ownership
+RUN chown -R ubuntu:ubuntu /images /app
 
-# Make the monitor script executable
-RUN chmod +x /usr/local/bin/monitor.sh
-
-# Set the working directory
-WORKDIR /images
+WORKDIR /app
 
 USER ubuntu
 
-# Set the entrypoint to bash for interactive debugging
-#ENTRYPOINT ["/bin/bash"]
-ENTRYPOINT ["/usr/local/bin/monitor.sh"]
+EXPOSE 5000
+
+ENTRYPOINT ["/app/venv/bin/python", "app.py"]
